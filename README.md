@@ -43,6 +43,20 @@ graph TD
 
 ### 2\. Install & Setup
 
+**Automatic**
+
+The repository has scripts that should check your environment and install anything needed before running the app.
+
+Try these first before moving on to the manual install below.  The scripts are:-
+
+```
+start.sh - MacOS/Linux
+start.bat - Windows old terminal
+start.ps1 - Windows PowerShell
+```
+
+**Manual**
+
 Open your terminal (Command Prompt or PowerShell) and follow these steps:
 
 **Step A: Clone or Download**
@@ -192,3 +206,4 @@ sequenceDiagram
 -----
 
 *Built with ❤️ for the NHS AI Community.*
+
