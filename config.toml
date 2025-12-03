@@ -1,9 +1,9 @@
 [app_settings]
-title = "NHS Chatbot Cookbook"
+title = "Chatbot Cookbook"
 icon = "👨‍🍳" 
-intro_title = "🍳 NHS Chatbot Cookbook" 
+intro_title = "🍳 Chatbot Cookbook" 
 intro_text = """
-**Welcome to your NHS chatbot guide**
+**Welcome to your chatbot guide**
 
 This app is a 'Digital Kitchen' where we will cook up an AI chatbot.  This will help you when you are told that your organisation must buy or use 'AI'. 
 
