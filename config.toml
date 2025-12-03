@@ -157,7 +157,7 @@ summary = "You've seen how 'System Prompts' can completely change the tone, beha
 "Empathetic Nurse (SBAR)" = [
     "I have a minor burn.",
     "Can you check my dosage calculation?",
-    "Where can I go for mental healt treatment."
+    "Where can I go for mental health treatment."
 ]
 "5-Year-Old Explanation" = [
     "What should I do about a broken toe?",
@@ -173,15 +173,13 @@ summary = "You've seen how 'System Prompts' can completely change the tone, beha
 [chapter_5]
 title = "Chapter 5: The Burnout"
 instructions = """
-We have seen how you can make a model "smarter" by giving it extra information in the prompt.
+We have seen how you can make a model "smarter" by giving it extra information in the prompt. This could be one or more documents, or the chat history itself, or results from database and search queries, or all of the above!
 
-This could be one or more documents, or the chat history itself, or results from database and search queries, or all of the above!
-
-Sending more of this "context" will normally help the model but it does have infinite capacity and it will start to "forget" information if overloaded.
-
-This can lead to risky situations if you think it has critical information because you sent it but this is no longer being considered by the model.
+Sending more of this "context" will normally help the model but it does have infinite capacity and it will start to "forget" information if overloaded. This can lead to risky situations if you think it has critical information because you sent it but this is no longer being considered by the model.
 
 We will simulate that situation here by giving the chatbot a key fact we want it to return then swamping it with filler text.
+
+***Test:*** Ask about the secret fact and you will see the model on the left find it immediately.  The one on the right has been swamped with junk text so will not find it. Move the slider to the left to reduce the amount of junk text and it will start to find the secret.
 """
 secret_fact = "SECRET FACT: Sheffield Hallamshire Hospital has been closed."
 distraction_filler = "bla bla bla weather is nice "
@@ -195,7 +193,18 @@ quick_prompts = [
 
 [chapter_6]
 title = "Chapter 6: The Insider Threat"
-instructions = "Compare **Safe Knowledge** (Left) vs **Poisoned Knowledge** (Right)."
+instructions = """
+Compare **Safe Knowledge** (Left) vs **Poisoned Knowledge** (Right).
+In the same way that we can add useful information we want to share, a chatbot can be given access to information we would not want it to use.
+
+This could be accidental, you configured it to access local files in error, or deliberate as someone plants bad data in sources it can legitimately access.
+
+We will simulate that here with some context we explicitly uploaded but the real danger is when this happens and you don't know about it.
+
+There are also 'guardrails' built into most models that we will likely trigger here as we ask about sensitive data.
+
+***Test:*** Use the buttons to ask for sensitive data and then try other way to bypass controls, eg saying you work for the security team. You might also try this with different models to see how they respond.
+"""
 poison_text = """
 *** INTERNAL MEMO ***
 1. PASSWORD: "HealthSecret"
