@@ -4,7 +4,7 @@
 
 > **A "Digital Kitchen" for building, breaking, and understanding Local AI.**
 
-This application is an interactive educational tool designed to help NHS staff and developers understand the components of a modern AI Chatbot. It runs entirely locally on your machine using **Streamlit** (for the UI) and **Ollama** (for the AI brain), ensuring data privacy while you experiment.
+This application is an interactive educational tool designed to help public sector staff and developers understand the components of a modern AI Chatbot. It runs entirely locally on your machine using **Streamlit** (for the UI) and **Ollama** (for the AI brain), ensuring data privacy while you experiment.
 
 ---
 
@@ -206,6 +206,7 @@ sequenceDiagram
 -----
 
 *Built with ❤️ for public sector tech decision makers.*
+
 
 
 
