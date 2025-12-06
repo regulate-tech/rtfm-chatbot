@@ -205,5 +205,6 @@ sequenceDiagram
 
 -----
 
-*Built with ❤️ for the NHS AI Community.*
+*Built with ❤️ for public sector tech decision makers.*
+
 
