@@ -1,6 +1,6 @@
 
 
-# 👨‍🍳 The NHS Chatbot Cookbook
+# 👨‍🍳 The Chatbot Cookbook
 
 > **A "Digital Kitchen" for building, breaking, and understanding Local AI.**
 
@@ -206,6 +206,7 @@ sequenceDiagram
 -----
 
 *Built with ❤️ for public sector tech decision makers.*
+
 
 
 
