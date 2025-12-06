@@ -92,7 +92,7 @@ ollama pull qwen2.5:0.5b
 ### 3\. Run the App 🍳
 
 ```bash
-streamlit run app-book-v4.py
+streamlit run app_book_v4.py
 ```
 
 Your browser should open automatically to `http://localhost:8501`.
@@ -206,5 +206,6 @@ sequenceDiagram
 -----
 
 *Built with ❤️ for public sector tech decision makers.*
+
 
 
