@@ -37,6 +37,7 @@ IF %ERRORLEVEL% NEQ 0 (
 :: 5. Run App
 echo.
 echo [INFO] Starting Application...
-streamlit run app-book-v4.py
+streamlit run app_book_v4.py
+
 
 pause
