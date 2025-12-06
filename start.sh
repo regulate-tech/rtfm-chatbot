@@ -66,4 +66,5 @@ echo "Press Ctrl+C to stop."
 echo ""
 
 # Run the final version
-streamlit run app-book-v4.py
+
+streamlit run app_book_v4.py
