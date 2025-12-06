@@ -47,6 +47,7 @@ Write-Host "[LAUNCH] Starting 'The Full Monty'..." -ForegroundColor Cyan
 Write-Host "Press Ctrl+C to stop." -ForegroundColor Gray
 Write-Host ""
 
-& $pythonExe -m streamlit run app-book-v4.py
+& $pythonExe -m streamlit run app_book_v4.py
+
 
 Read-Host "Application closed. Press Enter to exit..."
