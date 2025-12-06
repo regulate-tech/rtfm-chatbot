@@ -1,0 +1,30 @@
+site_name: AI Cookbook Documentation
+site_description: Technical reference for the Streamlit Chatbot Application
+site_url: https://example.com/cookbook
+
+# 1. The Theme (The "Google" look)
+theme:
+  name: material
+  palette: 
+    primary: teal
+    accent: purple
+  features:
+    - content.code.copy  # Adds copy button to code blocks
+    - navigation.expand  # Expands the sidebar by default
+
+# 2. Plugins (The Engine)
+plugins:
+  - search
+  - mkdocstrings:
+      default_handler: python
+      handlers:
+        python:
+          paths: [.]     # Look in the current folder for code
+          options:
+            show_root_heading: true
+            show_source: true   # Allows users to expand and see the actual code
+
+# 3. Navigation (The Menu)
+nav:
+  - Home: index.md
+  - API Reference: reference.md
