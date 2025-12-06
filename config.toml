@@ -25,6 +25,7 @@ You can record the interactions you have as you build the chatbot in a log file 
 num_thread = 4
 default_max_tokens = 512
 default_context_window = 4096
+default_temperature = 0.7
 
 [models]
 [models.XS]
@@ -76,7 +77,17 @@ input_placeholder = "Ask about what is in the policy..."
 instructions = """
 **The Lesson:** RAG (Retrieval Augmented Generation).
 
-We force the model to read a policy document before answering.
+We can ask a Large Language Model to read some information before it responds to us.
+
+If we tell it to prioritise the information we have provided then it will look here first for answers.
+
+This is a common way to create a specific chatbot for your organisation which has been given all your policies and other specific information.
+
+It becomes a kind of 'super search' as it can find your information using natural language and wrap it in a helpful explanation.
+
+The model on the left is the base model without the local information and the one on the right has been fed with the text above.
+
+When you press the buttons for the test queries you will see a big difference in the responses, and you can try your own queries around similar themes.
 """
 default_policy = """
 *** ORGANISATION POLICY 2025 ***
@@ -139,7 +150,17 @@ body = "The new target for non-urgent attendances is 4 hours from arrival to adm
 
 [chapter_4]
 title = "Chapter 4: Bedside Manner"
-instructions = "Compare **Default Personality** (Left) vs **Custom Persona** (Right)."
+instructions = """
+Compare **Default Personality** (Left) vs **Custom Persona** (Right).
+
+One of the most powerful things you can do to get the most out of a Large Language Model is to give it a persona.
+
+This is a set of instructions for how you want it to respond in terms of tone, style and substance.
+
+We have set up three different personas that you can try out. Select one and then pick a question.
+
+You will see how different the responses are and how well LLMs can follow this kind of guidance.
+"""
 input_placeholder = "Select a persona and button or add your own prompt..."
 summary = "You've seen how 'System Prompts' can completely change the tone, behavior, and format of the AI's response."
 

@@ -1,9 +1,11 @@
 # --- IMPORTS ---
 import os
 import random
+import textwrap
 import time
+from typing import Any, Dict, Generator, List, Optional, Tuple
 
-# Universal TOML support (Pro Tip: Handles Python < 3.11 automatically)
+# Universal TOML support
 try:
     import tomllib
 except ImportError:
@@ -21,7 +23,6 @@ except ImportError:
     HAS_DDG = False
 
 # --- CONSTANTS ---
-# Defined globally so we can calculate 'Next Module' logic
 CHAPTER_LIST = [
     "🏠 Home",
     "1. Raw Recruit",
@@ -34,26 +35,44 @@ CHAPTER_LIST = [
 ]
 DEFAULT_SUMMARY = "You learnt about another feature of chatbots in this module, now moving on to the next."
 
+# --- CONFIGURATION LAYER ---
 
-# --- CONFIG LOADER ---
+
 @st.cache_data
-def load_config(filename="config.toml"):
-    """Loads the TOML configuration file for text and settings."""
+def load_config(filename: str = "config.toml") -> Optional[Dict[str, Any]]:
+    """
+    Loads the TOML configuration file for text and settings.
+
+    This function attempts to read a local TOML file and parse it into a Python dictionary.
+    It uses 'tomllib' (Python 3.11+) or falls back to 'tomli'.
+
+    Args:
+        filename (str): The relative path to the configuration file. Defaults to "config.toml".
+
+    Returns:
+        Optional[Dict[str, Any]]: A dictionary containing the app configuration,
+        or None if the file does not exist.
+    """
     if not os.path.exists(filename):
         return None
-    # 'rb' mode is required for tomllib
     with open(filename, "rb") as f:
         return tomllib.load(f)
 
 
-def validate_config(config_data):
+def validate_config(config_data: Dict[str, Any]) -> List[str]:
     """
-    Sanity checks the TOML file on startup.
-    Returns a list of warnings (if any).
+    Sanity checks the TOML configuration structure on startup.
+
+    Verifies that all required chapters and settings sections exist.
+    It will halt execution via st.stop() if critical sections are missing.
+
+    Args:
+        config_data (Dict[str, Any]): The raw configuration dictionary loaded from TOML.
+
+    Returns:
+        List[str]: A list of non-critical warning messages (e.g., missing summaries).
     """
     warnings = []
-
-    # 1. defined required sections (keys in the TOML)
     required_sections = [
         "app_settings",
         "ollama_settings",
@@ -69,10 +88,8 @@ def validate_config(config_data):
     for section in required_sections:
         if section not in config_data:
             st.error(f"🚨 CRITICAL: Missing section '[{section}]' in config.toml")
-            st.stop()  # Stop execution if a whole section is missing
+            st.stop()
 
-        # 2. Check for 'summary' specifically (Non-critical warning)
-        # We skip checking 'app_settings' or 'models' for summaries
         if section.startswith("chapter_") and "summary" not in config_data[section]:
             warnings.append(f"⚠️ Missing 'summary' in [{section}]. Using default text.")
 
@@ -81,33 +98,39 @@ def validate_config(config_data):
 
 # Load Config Immediately
 config = load_config()
-
-# Fallback if config is missing (Safety Check)
 if not config:
     st.error("🚨 Configuration file 'config.toml' not found!")
     st.stop()
-
-# RUN THE VALIDATOR
 config_warnings = validate_config(config)
 
-# OPTIONAL: Display warnings in the sidebar for the developer
 if config_warnings:
     with st.sidebar:
         with st.expander("🛠️ Config Warnings", expanded=False):
             for w in config_warnings:
                 st.caption(w)
 
-# --- PAGE CONFIG ---
 st.set_page_config(
     page_title=config["app_settings"]["title"],
     layout="wide",
     page_icon=config["app_settings"]["icon"],
 )
 
+# --- BACKEND CONNECTION ---
 
-# --- GLOBAL SETUP ---
+
 @st.cache_resource
-def get_ollama_client():
+def get_ollama_client() -> Tuple[Optional[Client], bool]:
+    """
+    Establishes a connection to the local Ollama instance.
+
+    Args:
+        None
+
+    Returns:
+        Tuple[Optional[Client], bool]:
+            - Client: The Ollama client object if successful, else None.
+            - bool: True if connected, False if connection failed.
+    """
     try:
         client = Client(host="http://127.0.0.1:11434")
         client.list()
@@ -118,36 +141,71 @@ def get_ollama_client():
 
 client, connection_status = get_ollama_client()
 
-# --- HELPER FUNCTIONS ---
+# --- HELPER FUNCTIONS: I/O & LOGGING ---
 
 
-def read_uploaded_text(uploaded_file):
+def read_uploaded_text(uploaded_file: Any) -> str:
     """
-    Reads a text file uploaded via Streamlit and returns the string content.
-    Handles basic decoding errors.
+    Reads and decodes a text file uploaded via Streamlit.
+
+    Args:
+        uploaded_file (Any): The UploadedFile object from st.file_uploader.
+
+    Returns:
+        str: The decoded UTF-8 string content of the file, or an error message
+        if decoding fails. Returns empty string if file is None.
     """
     if uploaded_file is None:
         return ""
     try:
-        # standard utf-8 decoding
         return uploaded_file.getvalue().decode("utf-8")
     except UnicodeDecodeError:
         return "Error: File must be a text file (UTF-8)."
 
 
-def render_instructions(title, content):
+def render_instructions(title: str, content: str) -> None:
+    """
+    Renders a collapsible expander containing module instructions.
+
+    Args:
+        title (str): The header text for the expander.
+        content (str): Markdown formatted instruction text.
+    """
     with st.expander(f"📖 {title} (Click to Read Instructions)", expanded=True):
         st.markdown(content)
 
 
-def init_recording_state():
+def init_recording_state() -> None:
+    """
+    Initializes session state variables for the recording/logging feature.
+    """
     if "recording_log" not in st.session_state:
         st.session_state["recording_log"] = []
     if "is_recording" not in st.session_state:
         st.session_state["is_recording"] = False
 
 
-def save_interaction(module, label, user_query, ai_response, model, stats):
+def save_interaction(
+    module: str,
+    label: str,
+    user_query: str,
+    ai_response: str,
+    model: str,
+    stats: Optional[Dict[str, Any]],
+) -> None:
+    """
+    Appends a chat interaction to the session recording log.
+
+    This function only performs an action if 'is_recording' is True in session state.
+
+    Args:
+        module (str): The chapter name (e.g., "Ch2").
+        label (str): The experiment type (e.g., "RAG", "Base").
+        user_query (str): The prompt sent by the user.
+        ai_response (str): The text generated by the AI.
+        model (str): The name of the model used.
+        stats (Dict[str, Any]): Performance metrics (eval_count, duration).
+    """
     if st.session_state.get("is_recording"):
         params = {
             "ctx": st.session_state.get("ctx_slider", "Default"),
@@ -166,7 +224,13 @@ def save_interaction(module, label, user_query, ai_response, model, stats):
         st.session_state["recording_log"].append(entry)
 
 
-def generate_markdown_log():
+def generate_markdown_log() -> str:
+    """
+    Converts the structured recording log into a formatted Markdown string.
+
+    Returns:
+        str: A Markdown string suitable for file download.
+    """
     log = st.session_state.get("recording_log", [])
     if not log:
         return "# Empty Log"
@@ -185,29 +249,32 @@ def generate_markdown_log():
     return md
 
 
-def get_live_wait_times():
+# --- CORE LOGIC: TOOLS & AGENTS ---
+
+
+def get_live_wait_times() -> str:
     """
-    Generates fake data using locations defined in config.toml.
+    Simulates a database lookup for hospital wait times.
+
+    Reads configuration from 'chapter_3' to determine location names
+    and generates random integer values to simulate live data.
+
+    Returns:
+        str: A formatted string (e.g., "General: 45m | Urgent: 120m").
     """
     st.toast("Paging Operations Centre...", icon="📟")
     time.sleep(1)
 
-    # 1. Get the Chapter 3 config
     c3_conf = config.get("chapter_3", {})
-
-    # 2. Get the template and locations (with safe defaults)
     template = c3_conf.get(
         "pager_response_template", "{loc1}: {val1}m | {loc2}: {val2}m"
     )
     loc1 = c3_conf.get("location_1", "Location A")
     loc2 = c3_conf.get("location_2", "Location B")
 
-    # 3. Generate random data (The "Live" element)
-    # We use different ranges to make it feel realistic
-    val1 = random.randint(5, 45)  # Quick location
-    val2 = random.randint(60, 180)  # Busy location
+    val1 = random.randint(5, 45)
+    val2 = random.randint(60, 180)
 
-    # 4. Inject everything into the template
     return (
         template.replace("{loc1}", loc1)
         .replace("{loc2}", loc2)
@@ -216,20 +283,25 @@ def get_live_wait_times():
     )
 
 
-def perform_search(query, use_mock=False):
+def perform_search(query: str, use_mock: bool = False) -> List[Dict[str, str]]:
     """
-    Performs a real or mock search, with a configurable domain limit.
+    Executes a web search or retrieves mock results.
+
+    Uses DuckDuckGo Search (DDGS) restricted to domains defined in config,
+    or returns pre-configured mock data if internet is disabled.
+
+    Args:
+        query (str): The search term.
+        use_mock (bool): If True, skips the network call and uses config data.
+
+    Returns:
+        List[Dict[str, str]]: A list of dictionaries, where each dict contains
+        'title', 'href', and 'body'.
     """
-    # 1. Load Chapter 3 Config
     c3_conf = config.get("chapter_3", {})
 
-    # DEBUG: Visual confirmation
     if use_mock:
         st.toast(f"🕵️‍♀️ Triggering MOCK search for: {query}")
-    else:
-        st.toast(f"🌐 Triggering REAL search for: {query}")
-
-    if use_mock:
         time.sleep(1.5)
         results = c3_conf.get("mock_search_results", [])
         if not results:
@@ -242,7 +314,7 @@ def perform_search(query, use_mock=False):
             ]
         return results
 
-    # 2. Check for DuckDuckGo library
+    st.toast(f"🌐 Triggering REAL search for: {query}")
     if not HAS_DDG:
         return [
             {
@@ -252,38 +324,64 @@ def perform_search(query, use_mock=False):
             }
         ]
 
-    # 3. Construct the Query
-    # We get the domain limit from config (defaulting to 'nhs.uk' if missing, for safety)
     domain_limit = c3_conf.get("search_domain_limit", "nhs.uk")
-
-    if domain_limit:
-        # If a limit exists, we append the 'site:' operator
-        search_query = f"{query} site:{domain_limit}"
-    else:
-        # If it's empty string "", we just search the query as-is
-        search_query = query
+    search_query = f"{query} site:{domain_limit}" if domain_limit else query
 
     try:
-        # We perform the search
-        results = list(
+        return list(
             DDGS().text(search_query, region="uk-en", max_results=3, backend="html")
         )
-        return results
     except Exception as e:
         return [{"title": "Connection Error", "href": "#", "body": f"Error: {e}"}]
 
 
-def format_search_results(results):
+def format_search_results(results: List[Dict[str, str]]) -> str:
+    """
+    Formats raw search results into a string suitable for LLM context.
+
+    Args:
+        results (List[Dict[str, str]]): The output from perform_search.
+
+    Returns:
+        str: A single string with formatted sources and content.
+    """
     context_text = ""
     for r in results:
         context_text += f"SOURCE: [{r['title']}]({r['href']})\nCONTENT: {r['body']}\n\n"
     return context_text
 
 
-def stream_chat(model, messages, override_options=None, stats_container=None):
+def stream_chat(
+    model: str,
+    messages: List[Dict[str, str]],
+    override_options: Optional[Dict[str, Any]] = None,
+    stats_container: Optional[Dict[str, Any]] = None,
+) -> Generator[str, None, None]:
+    """
+    Generates a streaming response from the Ollama API.
+
+    This function yields text chunks as they arrive from the model. It also
+    updates the 'stats_container' in real-time if provided.
+
+    Args:
+        model (str): The tag of the model to use (e.g., 'llama2:latest').
+        messages (List[Dict[str, str]]): List of message dicts (role, content).
+        override_options (Optional[Dict]): specific parameter overrides (e.g. num_ctx).
+        stats_container (Optional[Dict]): A mutable dictionary to store performance stats.
+
+    Yields:
+        str: Chunks of text generated by the model.
+    """
     ctx_limit = st.session_state.get("ctx_slider", 4096)
     output_limit = st.session_state.get("out_slider", 750)
-    options = {"num_ctx": ctx_limit, "num_predict": output_limit, "temperature": 0.7}
+    temperature = st.session_state.get("temp_slider", 0.7)
+
+    options = {
+        "num_ctx": ctx_limit,
+        "num_predict": output_limit,
+        "temperature": temperature,
+    }
+
     if override_options:
         options.update(override_options)
 
@@ -300,17 +398,20 @@ def stream_chat(model, messages, override_options=None, stats_container=None):
         yield f"⚠️ **Model Error:** {str(e)}"
 
 
-# --- NEW UI HELPERS ---
+# --- UI HELPERS ---
 
 
-def render_response_metadata(stats, full_prompt):
+def render_response_metadata(stats: Dict[str, Any], full_prompt: str) -> None:
     """
-    Shows the Speed prominently with a tooltip explaining 'Speed' vs 'Max Tokens'.
+    Renders a UI component displaying generation speed and token usage.
+
+    Args:
+        stats (Dict[str, Any]): The statistics dictionary updated by stream_chat.
+        full_prompt (str): The complete prompt string sent to the model (for debugging).
     """
     if not stats:
         return
 
-    # 1. Calculate Metrics
     try:
         eval_dur = stats.get("eval_duration", 0) / 1e9
         prompt_eval_dur = stats.get("prompt_eval_duration", 0) / 1e9
@@ -320,31 +421,18 @@ def render_response_metadata(stats, full_prompt):
         eval_dur = 0
         prompt_eval_dur = 0
 
-    # 2. Determine Color (Visual Feedback)
     if tps > 30:
-        color_str = ":green"  # Fast
+        color_str = ":green"
     elif tps > 10:
-        color_str = ":orange"  # Average
+        color_str = ":orange"
     else:
-        color_str = ":red"  # Slow
+        color_str = ":red"
 
-    # 3. Tooltip Explanation
-    # This distinguishes between "Thinking Speed" (Hardware) and "Response Limit" (Slider)
-    speed_tooltip = """
-    🧠 Brain Speed (Tokens/sec):
-    This is how fast the AI is 'thinking'. 
-    It depends on your hardware and the Model Size.
-    
-    🛑 Max Tokens (see Advanced Parameters):
-    You can limit the reply size the model is ALLOWED to produce.
-    This won't make it run faster but will shorten your wait.
-    """
+    speed_tooltip = textwrap.dedent("""Brain Speed (Tokens per second)""").strip()
 
-    # 4. Render Layout
     c1, c2, c3 = st.columns([2, 1, 1])
 
     with c1:
-        # We use the native 'help' parameter to show the tooltip icon (?)
         st.markdown(f"**Speed:** {color_str}[**{tps:.1f} T/s**]", help=speed_tooltip)
 
     with c2:
@@ -360,9 +448,16 @@ def render_response_metadata(stats, full_prompt):
             st.code(full_prompt, language="text")
 
 
-def render_module_transition(current_module_name, summary_text, placeholder):
+def render_module_transition(
+    current_module_name: str, summary_text: str, placeholder: Any
+) -> None:
     """
-    Renders the Finish button into a specific UI placeholder (e.g., in the sidebar).
+    Renders the 'Finish Module' button and handles navigation logic.
+
+    Args:
+        current_module_name (str): The exact name of the current chapter.
+        summary_text (str): The text to display upon completion.
+        placeholder (Any): A Streamlit empty() container to render the button into.
     """
     try:
         current_index = CHAPTER_LIST.index(current_module_name)
@@ -376,10 +471,7 @@ def render_module_transition(current_module_name, summary_text, placeholder):
     def show_summary():
         st.session_state[view_key] = True
 
-    # --- KEY CHANGE: Use the placeholder ---
-    # We write into the specific container we passed in
     with placeholder.container():
-        # Optional: Add a divider to separate it visually
         st.write("---")
         if st.button(
             "🏁 Finish Module",
@@ -389,7 +481,6 @@ def render_module_transition(current_module_name, summary_text, placeholder):
         ):
             pass
 
-    # The Summary Text still appears in the main area (not the sidebar)
     if st.session_state.get(view_key, False):
         st.divider()
         st.info("🎓 **Module Summary**")
@@ -414,27 +505,32 @@ def render_module_transition(current_module_name, summary_text, placeholder):
             st.success("🎉 You have completed the entire Cookbook!")
 
 
-def render_quick_prompts(prompts_list):
+def render_quick_prompts(prompts_list: List[str]) -> Optional[str]:
     """
-    Renders a row of buttons. Returns the text of the button if clicked,
-    otherwise returns None.
+    Renders a horizontal row of buttons for quick-start prompts.
+
+    Args:
+        prompts_list (List[str]): A list of strings to display as buttons.
+
+    Returns:
+        Optional[str]: The text of the clicked button, or None if no click.
     """
     if not prompts_list:
         return None
 
-    # Create columns for a horizontal layout
     cols = st.columns(len(prompts_list))
     selected_prompt = None
 
     for i, text in enumerate(prompts_list):
-        # We use a unique key based on the text to avoid conflicts
         if cols[i].button(text, key=f"qp_{text[:10]}_{i}", use_container_width=True):
             selected_prompt = text
 
     return selected_prompt
 
 
-# --- SIDEBAR ---
+# --- MAIN UI EXECUTION ---
+# Note: The sidebar and main logic remain largely procedural in Streamlit.
+
 with st.sidebar:
     st.title(config["app_settings"]["title"])
     if connection_status:
@@ -452,17 +548,16 @@ with st.sidebar:
     if "saved_model_choice" not in st.session_state:
         st.session_state["saved_model_choice"] = model_names[0] if model_names else None
 
-    # --- NAVIGATION ---
+    # Navigation
     if "nav_selection" not in st.session_state:
         st.session_state["nav_selection"] = CHAPTER_LIST[0]
 
-    # Use 'nav_selection' key to allow programmatic changing of pages
     selected_module = st.radio("Select Chapter:", CHAPTER_LIST, key="nav_selection")
-
     module_finish_placeholder = st.empty()
 
     st.divider()
 
+    # Recorder
     st.subheader("📼 Session Recorder")
     init_recording_state()
     if not st.session_state["is_recording"]:
@@ -485,6 +580,7 @@ with st.sidebar:
 
     st.divider()
 
+    # Model Settings
     if "Home" not in selected_module and "Raw Recruit" not in selected_module:
         st.subheader("🍳 Kitchen Settings")
         try:
@@ -506,30 +602,25 @@ with st.sidebar:
         )
 
     with st.expander("⚙️ Advanced Parameters"):
-        # 1. Get defaults from config (Safe .get() with fallback)
-        # We look in 'ollama_settings' first
         ollama_conf = config.get("ollama_settings", {})
-
         default_ctx = ollama_conf.get("default_context_window", 4096)
         default_out = ollama_conf.get("default_max_tokens", 750)
+        default_temp = ollama_conf.get("default_temperature", 0.7)
 
-        # 2. Use these variables in the sliders
         st.slider(
-            "Context Window",
-            2048,
-            8192,
-            value=default_ctx,  # <--- Uses TOML value
-            step=512,
-            key="ctx_slider",
+            "Context Window", 2048, 8192, value=default_ctx, step=512, key="ctx_slider"
         )
-
         st.slider(
-            "Max Response",
-            256,
-            4096,
-            value=default_out,  # <--- Uses TOML value
-            step=256,
-            key="out_slider",
+            "Max Response", 256, 4096, value=default_out, step=256, key="out_slider"
+        )
+        st.slider(
+            "Temperature (Creativity)",
+            min_value=0.0,
+            max_value=1.0,
+            value=default_temp,
+            step=0.1,
+            key="temp_slider",
+            help="0.0 = Precise/Deterministic, 1.0 = Creative/Random",
         )
 
     if st.button("🗑️ Clear Page History"):
@@ -537,9 +628,10 @@ with st.sidebar:
         st.rerun()
 
 
-# --- MAIN CONTENT ---
+# --- PAGE ROUTING ---
 if f"history_{selected_module}" not in st.session_state:
     st.session_state[f"history_{selected_module}"] = []
+
 
 # HOME
 if "Home" in selected_module:
